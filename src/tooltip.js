@@ -277,24 +277,26 @@ class Tooltip extends Component<Props, State> {
   };
 
   measureChildRect = () => {
-    // $FlowFixMe: need to add type childWrapper
-    this.childWrapper.measureInWindow((x, y, width, height) => {
-      this.setState(
-        {
-          childRect: new Rect(x, y, width, height),
-          readyToComputeGeom: true,
-        },
-        () => {
-          const { contentSize, waitingToComputeGeom } = this.state;
-          if (waitingToComputeGeom) {
-            this._doComputeGeometry({ contentSize });
-          } else if (contentSize.width !== null) {
-            this._updateGeometry({ contentSize });
-          }
-          this.setState({ measurementsFinished: true });
-        },
-      );
-    });
+    if (this.childWrapper) {
+      // $FlowFixMe: need to add type childWrapper
+      this.childWrapper.measureInWindow((x, y, width, height) => {
+        this.setState(
+          {
+            childRect: new Rect(x, y, width, height),
+            readyToComputeGeom: true,
+          },
+          () => {
+            const { contentSize, waitingToComputeGeom } = this.state;
+            if (waitingToComputeGeom) {
+              this._doComputeGeometry({ contentSize });
+            } else if (contentSize.width !== null) {
+              this._updateGeometry({ contentSize });
+            }
+            this.setState({ measurementsFinished: true });
+          },
+        );
+      });
+    }
   };
 
   _doComputeGeometry = ({ contentSize }: ContentSizeProps) => {
