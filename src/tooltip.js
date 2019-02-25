@@ -50,6 +50,7 @@ type Props = {
 };
 
 type State = {
+  waitingForInteractions: boolean,
   contentSize: SizeType,
   anchorPoint: PointType,
   tooltipOrigin: PointType,
@@ -99,7 +100,11 @@ class Tooltip extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
 
+    const { isVisible } = props;
+
     this.state = {
+      // no need to wait for interactions if not visible initially
+      waitingForInteractions: isVisible,
       contentSize: new Size(0, 0),
       anchorPoint: new Point(0, 0),
       tooltipOrigin: new Point(0, 0),
@@ -114,6 +119,15 @@ class Tooltip extends Component<Props, State> {
         fade: new Animated.Value(0),
       },
     };
+  }
+
+  componentDidMount() {
+    if (this.state.waitingForInteractions) {
+      InteractionManager.runAfterInteractions(() => {
+        this.measureChildRect();
+        this.setState({ waitingForInteractions: false });
+      });
+    }
   }
 
   componentWillReceiveProps(nextProps: Props) {
@@ -193,8 +207,8 @@ class Tooltip extends Component<Props, State> {
     }
 
     return {
-      left: anchorPoint.x - tooltipOrigin.x - ((width / 2) + marginLeft),
-      top: anchorPoint.y - tooltipOrigin.y - ((height / 2) + marginTop),
+      left: anchorPoint.x - tooltipOrigin.x - ((width / 2) - marginLeft),
+      top: anchorPoint.y - tooltipOrigin.y - ((height / 2) - marginTop),
       width,
       height,
       borderTopWidth: height / 2,
@@ -277,7 +291,7 @@ class Tooltip extends Component<Props, State> {
           } else if (contentSize.width !== null) {
             this._updateGeometry({ contentSize });
           }
-          this.setState({ measurementsFinished: true })
+          this.setState({ measurementsFinished: true });
         },
       );
     });
@@ -297,8 +311,8 @@ class Tooltip extends Component<Props, State> {
         waitingToComputeGeom: false,
       },
       () => {
-        this._startAnimation({ show: true })
-      }
+        this._startAnimation({ show: true });
+      },
     );
   };
 
@@ -487,7 +501,7 @@ class Tooltip extends Component<Props, State> {
       return null;
     }
 
-    const { measurementsFinished, placement } = this.state;
+    const { measurementsFinished, placement, waitingForInteractions } = this.state;
     const { backgroundColor, children, content, isVisible, onClose } = this.props;
 
     const extendedStyles = this._getExtendedStyles();
@@ -507,9 +521,14 @@ class Tooltip extends Component<Props, State> {
     return (
       <View>
         {/* This renders the fullscreen tooltip */}
-        <Modal transparent visible={isVisible} onRequestClose={onClose}>
+        <Modal transparent visible={isVisible && !waitingForInteractions} onRequestClose={onClose}>
           <TouchableWithoutFeedback onPress={onClose}>
-            <View style={[styles.container, contentSizeAvailable && measurementsFinished && styles.containerVisible]}>
+            <View
+              style={[
+                styles.container,
+                contentSizeAvailable && measurementsFinished && styles.containerVisible,
+              ]}
+            >
               <Animated.View
                 style={[styles.background, ...extendedStyles.background, { backgroundColor }]}
               />
